@@ -1,4 +1,4 @@
-name:                parse-fcs
+-name:                parse-fcs
 version:             0.1.0.0
 github:              "githubuser/parse-fcs"
 license:             LGPL-3
@@ -22,6 +22,22 @@ description:         Please see the README on GitHub at <https://github.com/gith
 dependencies:
 - base >= 4.7 && < 5
 - hspec
+- aeson
+- bytestring
+- text
+- mtl
+- time
+- containers
+- filepath
+- string-interpolate
+- array
+- optparse-applicative
+- binary-strict
+- attoparsec
+- attoparsec-binary
+- hspec-attoparsec
+- hspec-megaparsec
+- megaparsec
 
 library:
   source-dirs: src

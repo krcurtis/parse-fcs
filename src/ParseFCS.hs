@@ -1,55 +1,78 @@
+-- Copyright 2026 Fred Hutchinson Cancer Center
+-- Copyright 2020 Keith Curtis
 --------------------------------------------------------------------------------
 --- Parse FCS3.1 files
 
-{-
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
+
+
+
+{-
 Keywords are in ASCII
 Values are in UTF-8
-
 address ranges seem to be of the inclusive type
-
 byte offsets are from the beginning of a data set. The first data set starts at file offset zero. but there can be multiple data sets ...
 
-
 delimiter could be 0x01 to 0x7e, but maybe is usually 0x2f , '/'?
-
-
-I'm sure I'm going to want to throw exceptions about parse errors but I don't want the progam to crash in this during the test suite because of it.
-
 -}
 
 
 
-{-# LANGUAGE OverloadedStrings #-}
 
 
 module ParseFCS where
 
-import Text.Megaparsec
-import Text.Megaparsec.Byte
-import Data.Void
-import qualified Data.ByteString.Strict as B
+import Data.Attoparsec.ByteString
+import Data.Attoparsec.Combinator
+import Data.Attoparsec.Binary
+import Control.Applicative ((<*>), (*>), (<$>), (<|>), pure)
+
+
+
+-- import qualified Data.ByteString as BS
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C
+
+
+import qualified Data.Text as T
+import Data.Void
 import System.IO
 
 --------------------------------------------------------------------------------
-
-type Parser = Parsec Void ByteString
 
 
 -- I think there's some weird encoding options that one needs to worry about but this is the basic version
 data FCSHeader = FCSHeader
     { fh_version :: B.ByteString
     , fh_text_start_offset :: Int
-    , fh_text_last_offset :: Int    
+    , fh_text_last_offset :: Int
     , fh_data_start_offset :: Int
     , fh_data_last_offset :: Int
     , fh_analysis_start_offset :: Int
     , fh_analysis_last_offset :: Int
     , fh_other_offset :: Int
     }
-    
+  deriving (Show, Eq)
 
+-- TODO define correct data structures
+data FCS = FCS B.ByteString
+  deriving (Show, Eq)
+
+data FCSText = FCSText B.ByteString
+  deriving (Show, Eq)
+
+data FCSData = FCSData B.ByteString
+  deriving (Show, Eq)
+
+data FCSAnalysis = FCSAnalysis B.ByteString
+  deriving (Show, Eq)
+
+data FCSOther = FCSOther B.ByteString
+  deriving (Show, Eq)
+
+--------------------------------------------------------------------------------
 
 
 fcs_version_length = 6
@@ -68,11 +91,13 @@ fcs_base_header_length = fcs_version_length + fcs_space + fcs_text_first_length 
 load_fcs_base_header :: FilePath -> IO C.ByteString
 load_fcs_base_header filename = do
     handle <- openFile filename ReadMode
-    header_bytes <- C.hget handle fcs_base_header_length
+    header_bytes <- C.hGet handle fcs_base_header_length
     hClose handle
     return header_bytes
 
 
+-- TODO
+{-
 parse_fcs_base_header :: C.ByteString -> Either String FCSHeader
 parse_fcs_base_header bytes | C.length bytes < fcs_base_header_length = Left "Insufficient bytes in header"
 parse_fcs_base_header bytes = results
@@ -95,34 +120,44 @@ parse_fcs_base_header bytes = results
         (analysis_first_last_bytes, next11) = feed_thru fcs_analysis_last_length next10
         (analysis_last_start_bytes, next12) = feed_thru fcs_analysis_first_length next11
         (analysis_last_last_bytes, _) = feed_thru fcs_analysis_last_length next12
+      in
+      undefined
 
-        TODO
+    results = undefined
+-}
 
-        
 
-parseFCS :: Parser FCS
-parseFCS = do
+parse_fcs :: Parser FCS
+parse_fcs = do
   parse_fcs_header
   parse_text_segment
   parse_data_segment
   parse_analysis_segment
   parse_other_segment -- maybe there could be multiple other segments?
-
+  return $ FCS ""
 
 
 {- the segments are at byte offsets, could the segments be at essentially random positions?? Do I need to load particular byte regions before parsing? -}
 
 parse_fcs_header :: Parser FCSHeader
 parse_fcs_header = do
-    string "FCS3.1"
-    string "    "
-    text start
-    text end
-    data start
-    data end
-    analysis start
-    analysis end
-    other
+  fh_version <- string "FCS3.1"
+  string "    "
+  --text start
+  --text end
+  --data start
+  --data end
+  --analysis start
+  --analysis end
+  --other
+  let fh_text_start_offset = 0
+      fh_text_last_offset = 0
+      fh_data_start_offset = 0
+      fh_data_last_offset = 0 
+      fh_analysis_start_offset = 0
+      fh_analysis_last_offset = 0
+      fh_other_offset = 0
+  return FCSHeader{..}
 
 
 
@@ -157,7 +192,7 @@ keyword_next_data = "$NEXTDATA" -- Byte offset to next data set in the file
 keyword_n_params = "$PAR" -- Number of parameters in an event
 keyword_param_bits = "$PnB" -- Number of bits reserved for parameter number n
 keyword_amplify_param = "$PnE" -- Amplification type for parameter n
-keyword_param_sname = "$PnN" -- Short name for parameter n
+keyword_param_name = "$PnN" -- Short name for parameter n
 keyword_param_range = "$PnR" -- Range for parameter number n
 keyword_total_events = "$TOT" -- Total number of events in the data set
 
@@ -204,7 +239,7 @@ keyword_param_calibration = "$PnCALIBRATION" -- Conversion of parameter values t
 keyword_param_scale = "$PnD" -- Suggested visualization scale for parameter n
 keyword_param_filter = "$PnF" -- Name of optical filter for parameter n
 keyword_param_gain = "$PnG" -- Amplifier gain used for acquisition of parameter n
-keyword_param_wavelength = "$PnL" Excitation wavelength(s) for parameter n
+keyword_param_wavelength = "$PnL" -- Excitation wavelength(s) for parameter n
 keyword_param_power = "$PnO" -- Excitation power for parameter n
 keyword_param_collected = "$PnP" -- Percent of emitted light collected by parameter n
 keyword_param_sname = "$PnS" -- Name used for parameter n
@@ -222,4 +257,3 @@ keyword_time_step = "$TIMESTEP" -- Time step for time parameter
 keyword_trigger = "$TR" -- Trigger parameter and its threshold
 keyword_sample_volumen = "$VOL" -- Volume of sample run during data acquisition
 keyword_well_id = "$WELLID" -- Well identifier
-
