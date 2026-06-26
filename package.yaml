@@ -38,6 +38,7 @@ dependencies:
 - hspec-attoparsec
 - hspec-megaparsec
 - megaparsec
+- MissingH
 
 library:
   source-dirs: src

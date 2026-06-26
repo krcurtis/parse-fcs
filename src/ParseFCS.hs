@@ -40,6 +40,9 @@ import qualified Data.Text as T
 import Data.Void
 import System.IO
 
+import Data.Bits.Utils (w82c, c2w8, w82s)
+import Data.Char (isDigit)
+
 --------------------------------------------------------------------------------
 
 
@@ -60,8 +63,38 @@ data FCSHeader = FCSHeader
 data FCS = FCS B.ByteString
   deriving (Show, Eq)
 
-data FCSText = FCSText B.ByteString
+data FCSDataType = FCS_UNSIGNED_BINARY | FCS_FLOAT32 | FCS_FLOAT64 | FCS_ASCII
   deriving (Show, Eq)
+
+data Parameter = Parameter { p_n_bits :: Int
+                           , p_amplification :: (Float, Float)  -- values could be floats or integers sounds like, oh it may depend on the FCSDataType, yikes, like why
+                           , p_name :: T.Text
+                           , p_range :: Int  -- depend on the FCSDataType, yikes, like why
+                           }
+  deriving (Show, Eq)
+                               
+
+-- mandatory fields specifically listed, but this apparently requires a separate error checking step
+data FCSText = FCSText { ft_analysis_start_offset :: Int
+                       , ft_data_start_offset :: Int
+                       , ft_supplemental_start_offset :: Int
+                       , ft_byte_order :: Bool -- True if little endian, False if big endian
+                       , ft_data_type :: FCSDataType
+                       , ft_analysis_last_offset :: Int
+                       , ft_data_last_offset :: Int
+                       , ft_supplemental_last_offset :: Int
+                       , ft_mode :: Bool
+                       , ft_next_data_offset :: Int
+                       , ft_n_parameters :: Int
+                       , ft_parameters :: [Parameter]
+                       , ft_n_total_events :: Int
+                       , ft_optional :: [(T.Text,T.Text)]
+                       }
+  deriving (Show, Eq)
+
+
+type ParameterBlob = [(T.Text, T.Text)] -- this might be the most general form for the TEXT segment
+
 
 data FCSData = FCSData B.ByteString
   deriving (Show, Eq)
@@ -139,24 +172,29 @@ parse_fcs = do
 
 {- the segments are at byte offsets, could the segments be at essentially random positions?? Do I need to load particular byte regions before parsing? -}
 
+parse_right_justified_int :: Int -> Parser Int
+parse_right_justified_int n = do
+  pre_space <- takeTill (\c -> c /= c2w8 ' ')
+  let n_digits  = n - B.length pre_space
+  text_number <- count n_digits (satisfy (isDigit . w82c))
+  let value = (read . w82s $ text_number) :: Int
+  return value
+
+-- TODO parse_spaces_as_zero :: Int -> Parser Int   -- I think OTHER segment offset is sometimes not given, and 
+
 parse_fcs_header :: Parser FCSHeader
 parse_fcs_header = do
   fh_version <- string "FCS3.1"
-  string "    "
-  --text start
-  --text end
-  --data start
-  --data end
-  --analysis start
-  --analysis end
-  --other
-  let fh_text_start_offset = 0
-      fh_text_last_offset = 0
-      fh_data_start_offset = 0
-      fh_data_last_offset = 0 
-      fh_analysis_start_offset = 0
-      fh_analysis_last_offset = 0
-      fh_other_offset = 0
+  _ <- string "    "
+  
+  fh_text_start_offset <- parse_right_justified_int 8
+  fh_text_last_offset <- parse_right_justified_int 8
+  fh_data_start_offset <- parse_right_justified_int 8
+  fh_data_last_offset <- parse_right_justified_int 8
+  fh_analysis_start_offset <- parse_right_justified_int 8
+  fh_analysis_last_offset <- parse_right_justified_int 8
+      
+  let fh_other_offset = 0
   return FCSHeader{..}
 
 

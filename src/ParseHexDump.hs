@@ -90,3 +90,14 @@ parse_hexdump = do
       bs = concat bss
       results = B.pack bs
   return results
+
+
+
+hexdump_to_bs :: T.Text -> B.ByteString
+hexdump_to_bs input_text =   case result of
+                               Left bundle -> error  (errorBundlePretty bundle)
+                               Right xs -> xs
+  where
+    result = parse parse_hexdump "" input_text
+
+
