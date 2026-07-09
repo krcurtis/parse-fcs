@@ -148,3 +148,18 @@ spec = describe "Tests for parsing FCS format" $ do
 
 -- text size is 1681 - 256 + 1
 
+  it "parse escaped-delimiter text" $ do
+    let bytes = hexdump_to_bs . T.pack . unlines $ [ "00000000  61 62 63 2f 2f 64 65 66  67 68 69 6a 6b 6c 69 6d  |abc//defghijklim|"
+                                                   , "00000010  6f 70 2f 0a                                       |op/.|"
+                                                   ]
+        delimiter = 0x2f
+        expected = "abc/defghijklimop"
+    bytes ~> parse_delimited_bytes delimiter `shouldParse` expected
+
+  it "parse keyword pair text" $ do
+    let bytes = hexdump_to_bs . T.pack . unlines $ [ "00000000  24 42 45 47 49 4e 2f 61  62 63 2f 2f 64 65 66 67  |$BEGIN/abc//defg|"
+                                                   , "00000010  68 69 6a 6b 6c 69 6d 6f  70 2f 0a                 |hijklimop/.|"
+                                                   ]
+        delimiter = 0x2f
+        expected = ("$BEGIN", "abc/defghijklimop")
+    bytes ~> parse_keyword_pair delimiter `shouldParse` expected

@@ -43,6 +43,7 @@ import System.IO
 import Data.Bits.Utils (w82c, c2w8, w82s)
 import Data.Char (isDigit)
 import Data.Word -- for Word8
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
 
 --------------------------------------------------------------------------------
 
@@ -293,8 +294,13 @@ parse_text_segment = do
 
 -- assume starts with $.../.../
 parse_keyword_pair :: Word8 -> Parser (T.Text, T.Text)
-parse_keyword_pair delimiter = undefined
+parse_keyword_pair delimiter = do
+  keyword <- parse_delimited_bytes delimiter
+  value <- parse_delimited_bytes delimiter
 
+  let keyword' = T.toUpper . decodeUtf8 $ keyword
+      value' = decodeUtf8 value
+  return (keyword', value')
 
 
 parse_delimited_bytes :: Word8 -> Parser B.ByteString
