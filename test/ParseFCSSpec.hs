@@ -146,5 +146,5 @@ spec = describe "Tests for parsing FCS format" $ do
                              }
     bytes ~> parse_fcs_header `shouldParse` expected
 
-
+-- text size is 1681 - 256 + 1
 

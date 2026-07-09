@@ -42,6 +42,7 @@ import System.IO
 
 import Data.Bits.Utils (w82c, c2w8, w82s)
 import Data.Char (isDigit)
+import Data.Word -- for Word8
 
 --------------------------------------------------------------------------------
 
@@ -199,19 +200,6 @@ parse_fcs_header = do
 
 
 
--- keywords are case insensitive?
-parse_text_segment :: Parser FCSText
-parse_text_segment = undefined
-
-
-parse_data_segment :: Parser FCSData
-parse_data_segment = undefined
-
-parse_analysis_segment :: Parser FCSAnalysis
-parse_analysis_segment = undefined
-
-parse_other_segment :: Parser FCSOther
-parse_other_segment = undefined
 
 
 
@@ -295,3 +283,44 @@ keyword_time_step = "$TIMESTEP" -- Time step for time parameter
 keyword_trigger = "$TR" -- Trigger parameter and its threshold
 keyword_sample_volumen = "$VOL" -- Volume of sample run during data acquisition
 keyword_well_id = "$WELLID" -- Well identifier
+
+
+-- keywords are case insensitive, todo convert to upper case
+parse_text_segment :: Parser ParameterBlob
+parse_text_segment = do
+  delimiter <- anyWord8  -- grab the arbitrary delimiter, expected to usually be '/' but spec allows this to be different
+  return undefined
+
+-- assume starts with $.../.../
+parse_keyword_pair :: Word8 -> Parser (T.Text, T.Text)
+parse_keyword_pair delimiter = undefined
+
+
+
+parse_delimited_bytes :: Word8 -> Parser B.ByteString
+parse_delimited_bytes delimiter = do
+  bs <- Data.Attoparsec.ByteString.takeWhile (\x -> x /= delimiter)
+  _ <- word8 delimiter
+  escaped_delimiter <- peekWord8
+  more_bs <- case escaped_delimiter of
+               Just x | x == delimiter -> do   -- escaped delimiter
+                                            _ <- word8 delimiter
+                                            continued_bytes <- parse_delimited_bytes delimiter
+                                            return $ delimiter `B.cons` continued_bytes
+               Just _ | otherwise -> return ""
+               Nothing -> return ""
+
+  let bs' = bs `B.append` more_bs
+  return bs'
+
+
+
+
+parse_data_segment :: Parser FCSData
+parse_data_segment = undefined
+
+parse_analysis_segment :: Parser FCSAnalysis
+parse_analysis_segment = undefined
+
+parse_other_segment :: Parser FCSOther
+parse_other_segment = undefined

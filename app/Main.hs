@@ -15,11 +15,14 @@ import Options.Applicative ((<|>))
 import Data.String (IsString)
 import Data.String.Interpolate
 
+import qualified Data.ByteString as B
 
+import Data.Attoparsec.ByteString
+import Data.Attoparsec.Combinator
 
 --------------------------------------------------------------------------------
 -- local modules
-
+import ParseFCS
 
 
 --------------------------------------------------------------------------------
@@ -35,7 +38,7 @@ data CommandParameters = SummarizeOptions { so_arg_input_fcs :: String
 input_fcs_parse :: IsString s => O.Parser s
 input_fcs_parse = O.strOption
                    ( O.long "input-fcs"
-                   <> O.short 'f'
+                   <> O.short 'i'
                    <> O.metavar "FILE"
                    <> O.help "flow cytometry/CyTOF file in FCS format")
 
@@ -66,7 +69,17 @@ run_app SummarizeOptions{..}= do
   let arg_fcs_file = so_arg_input_fcs
 
   putStrLn [i|Reading #{arg_fcs_file}|]
+  fcs_data <- B.readFile arg_fcs_file
 
+  let header_bytes = B.take fcs_base_header_length fcs_data
+      header = case (parseOnly parse_fcs_header header_bytes) of
+                 Left msg -> error msg
+                 Right x -> x
+      text_size = fh_text_last_offset header - fh_text_start_offset header + 1
+      text_segment = B.take text_size $ B.drop (fh_text_start_offset header) fcs_data
+                 
+  putStrLn [i|Header #{header}|]
+  putStrLn "DONE"
 
 
     

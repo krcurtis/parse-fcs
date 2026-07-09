@@ -68,17 +68,25 @@ parse_hex_32bit = do
   return hex_value
 
 
+parse_group_of_hex_bytes :: Parser [Word8]
+parse_group_of_hex_bytes = do
+  hex_bytes <- some (parse_hex_byte <* char ' ' <* (optional (char ' ')))
+  return hex_bytes
+
 parse_hexdump_line :: Parser HexLine
 parse_hexdump_line = do
   hl_address <- parse_hex_32bit
   _ <- string "  "
-  first_eight <- count 8 (parse_hex_byte <* char ' ')
-  _ <- char ' '
-  second_eight <- count 8 (parse_hex_byte <* char ' ')
-  _ <- string " |"
-  hl_ascii_text <- fmap T.pack (count 16 anySingle)
+  hex_bytes <- parse_group_of_hex_bytes
+  _ <- if length hex_bytes < 16 then
+          some (char ' ')
+        else
+          pure []
+  _ <- string "|"
+  let n = length hex_bytes
+  hl_ascii_text <- fmap T.pack (count n anySingle)
   _ <- char '|'
-  let hl_bytes = first_eight ++ second_eight
+  let hl_bytes = hex_bytes
   return $ HexLine{..}
   
 

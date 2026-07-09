@@ -66,4 +66,14 @@ spec = describe "Tests for parsing hexdump text" $ do
                           ]
     (hexdump_to_bs hexdump_text) `shouldBe` expected
 
+  it "parse short hexdump" $ do
+    let hexdump_text = T.pack . unlines $ [ "00000000  24 42 45 47 49 4e 2f 61  62 63 2f 2f 64 65 66 67  |$BEGIN/abc//defg|"
+                                          , "00000010  68 69 6a 6b 6c 69 6d 6f  70 2f 0a                 |hijklimop/.|"
+                                          ]
+        expected = B.pack [ 0x24, 0x42, 0x45, 0x47, 0x49, 0x4e, 0x2f, 0x61,  0x62, 0x63, 0x2f, 0x2f, 0x64, 0x65, 0x66, 0x67
+                          , 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x69, 0x6d, 0x6f,  0x70, 0x2f, 0x0a
+                          ]
+    (hexdump_to_bs hexdump_text) `shouldBe` expected
+
+
 
