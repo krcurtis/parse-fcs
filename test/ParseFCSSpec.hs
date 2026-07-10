@@ -163,3 +163,13 @@ spec = describe "Tests for parsing FCS format" $ do
         delimiter = 0x2f
         expected = ("$BEGIN", "abc/defghijklimop")
     bytes ~> parse_keyword_pair delimiter `shouldParse` expected
+
+  it "parse short text segment" $ do
+    let bytes = hexdump_to_bs . T.pack . unlines $ [ "00000100  2f 24 42 45 47 49 4e 41  4e 41 4c 59 53 49 53 2f  |/$BEGINANALYSIS/|"
+                                                   , "00000110  30 2f 24 42 45 47 49 4e  44 41 54 41 2f 31 36 38  |0/$BEGINDATA/168|"
+                                                   , "00000120  32 2f                                             |2/|"
+                                                   ]
+        expected = [ ("$BEGINANALYSIS", "0"), ("$BEGINDATA", "1682")]
+    bytes ~> parse_text_segment `shouldParse` expected
+
+    

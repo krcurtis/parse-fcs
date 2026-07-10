@@ -20,6 +20,8 @@ import qualified Data.ByteString as B
 import Data.Attoparsec.ByteString
 import Data.Attoparsec.Combinator
 
+import Control.Monad
+
 --------------------------------------------------------------------------------
 -- local modules
 import ParseFCS
@@ -73,12 +75,21 @@ run_app SummarizeOptions{..}= do
 
   let header_bytes = B.take fcs_base_header_length fcs_data
       header = case (parseOnly parse_fcs_header header_bytes) of
-                 Left msg -> error msg
+                 Left msg -> error [i|ERROR parsing header:\n#{msg}|]
                  Right x -> x
       text_size = fh_text_last_offset header - fh_text_start_offset header + 1
       text_segment = B.take text_size $ B.drop (fh_text_start_offset header) fcs_data
-                 
+      parameters = case (parseOnly parse_text_segment text_segment) of
+                     Left msg -> error [i|ERROR parsing text segment:\n#{msg}|]
+                     Right x -> x
+
   putStrLn [i|Header #{header}|]
+
+  putStrLn [i|Parameter for initial text segment|]
+  forM_ parameters $ \(k,v) -> do
+    putStrLn [i|  #{k} : #{v}|]
+                 
+
   putStrLn "DONE"
 
 
