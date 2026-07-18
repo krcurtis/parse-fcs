@@ -62,7 +62,7 @@ data FCSHeader = FCSHeader
   deriving (Show, Eq)
 
 
-type ParameterBlob = [(T.Text, T.Text)] -- this might be the most general form for the TEXT segment
+-- type ParameterBlob = [(T.Text, T.Text)] -- this might be the most general form for the TEXT segment
 
 
 data FCSData = FCSData B.ByteString
@@ -145,7 +145,7 @@ parse_fcs_header = do
 
 
 -- keywords are case insensitive, todo convert to upper case
-parse_text_segment :: Parser ParameterBlob
+parse_text_segment :: Parser [(T.Text, T.Text)]
 parse_text_segment = do
   delimiter <- anyWord8  -- grab the arbitrary delimiter, expected to usually be '/' but spec allows this to be different
   pairs <- some (parse_keyword_pair delimiter)

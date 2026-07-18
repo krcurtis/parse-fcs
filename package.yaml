@@ -39,6 +39,7 @@ dependencies:
 - hspec-megaparsec
 - megaparsec
 - MissingH
+- extra
 
 library:
   source-dirs: src
