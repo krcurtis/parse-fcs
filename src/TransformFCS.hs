@@ -16,9 +16,10 @@ import qualified Data.ByteString.Char8 as C
 import qualified Data.Text as T
 import Data.String.Interpolate
 
-import Data.Map.Strict as Map
+import qualified Data.Map.Strict as Map
 import Data.Either (partitionEithers)
 import Data.Either.Extra (eitherToMaybe)
+import qualified Data.Set as Set
 --import Data.Functor ((<&>))
 
 -- import Data.Void
@@ -171,7 +172,7 @@ keyword_param_sname n = T.pack [i|$P#{n}S|] -- Short name for parameter n
 --------------------------------------------------------------------------------
 
 
-lookfor :: (Show k, Ord k) => Map k v -> k -> Either String v
+lookfor :: (Show k, Ord k) => Map.Map k v -> k -> Either String v
 lookfor map k = case (Map.lookup k map) of
                  Nothing  -> Left [i|ERROR Missing expected entry #{show k}|]
                  Just val -> Right val
@@ -195,7 +196,10 @@ mandatory_parameters n = basic ++ params
             , "$ENDANALYSIS"
             , "$BYTEORD"
             , "$TOT"
-
+            , "$DATATYPE"
+            , "$MODE"
+            , "$PAR"
+            , "$NEXTDATA"
             ]
     params = concat [[keyword_param_bits i, keyword_amplify_param i, keyword_param_name i, keyword_param_range i] | i <- [1..n]]
 
@@ -251,5 +255,9 @@ transform_parameters xs = do
                                                  _ -> Left [i|ERROR data acquisition mode not of allowed choices #{x}|]
 
   ft_parameters <- mapM (lookup_parameter m) [1 .. ft_n_parameters]
-  let ft_key_values = []
+
+  
+  let expected = mandatory_parameters ft_n_parameters
+      expected' = Set.fromList expected
+      ft_key_values = filter (\t -> fst t `Set.notMember` expected' ) xs
   return FCSText{..}

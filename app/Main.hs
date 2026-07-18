@@ -25,7 +25,7 @@ import Control.Monad
 --------------------------------------------------------------------------------
 -- local modules
 import ParseFCS
-
+import TransformFCS
 
 --------------------------------------------------------------------------------
 -- local data structures
@@ -90,6 +90,7 @@ run_app SummarizeOptions{..}= do
     putStrLn [i|  #{k} : #{v}|]
                  
 
+  putStrLn $ show $ transform_parameters parameters
   putStrLn "DONE"
 
 
